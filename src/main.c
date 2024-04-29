@@ -1,5 +1,6 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_events.h>
+#include <SDL2/SDL_keycode.h>
 #include <SDL2/SDL_rect.h>
 #include <SDL2/SDL_scancode.h>
 
@@ -8,10 +9,11 @@
 
 #define PADDLE_OFFSET 20.0
 #define PADDLE_WIDTH 16.0
-#define PADDLE_HEIGHT 120.0
+#define PADDLE_HEIGHT 110.0
 
 #define BALL_SIZE 10.0
 
+const Uint8* keyboard;
 SDL_bool gameOver = 0;
 
 enum Direction { UP = 0, DOWN = 1, LEFT = 2, RIGHT = 3 };
@@ -149,14 +151,14 @@ SDL_FPoint bounce_dir(SDL_FRect* to_bounce, SDL_FRect* to_bounce_off) {
   
   float dx = to_bounce_center.x - to_bounce_off_center.x;
   float dy = to_bounce_center.y - to_bounce_off_center.y; printf("dy: %f\n", dy);
-  float n = norm2D(dx,dy);
 
-  SDL_FPoint pt = {dy/n, 1-fabs(dy/n)};
-  if (dx<0) { pt.x = -fabs(pt.x); }
-  else {pt.x = fabs(pt.x); }
+  float fct  = (dy) / (PADDLE_HEIGHT/2);
+  SDL_FPoint pt = {1 - fabs(fct), fct};
+  if (dx<0) { pt.x = -fabs(pt.x); } //bounce to left
+  else {pt.x = fabs(pt.x); } // bounce to right
 
-  if (dy < 0 ) { pt.y = -fabs(pt.y); }
-  else pt.y = fabs(pt.y);
+  if (dy < 0 ) { pt.y = -fabs(pt.y); } //Top half: go up
+  else pt.y = fabs(pt.y); // Bottom half: go down
   
   
   return pt;
@@ -177,6 +179,8 @@ int main(int argc, char** argv){
 
   SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
   if (renderer == NULL) { printf("Failed Renderer Creation\n"); return 1;}
+
+  keyboard = SDL_GetKeyboardState(NULL);
   
   SDL_FRect ball_rect = { SCREEN_WIDTH/2, SCREEN_HEIGHT/2-20, BALL_SIZE, BALL_SIZE };
   SDL_FRect p1 = { PADDLE_OFFSET + PADDLE_WIDTH/2, SCREEN_HEIGHT/2, PADDLE_WIDTH, PADDLE_HEIGHT };
@@ -189,7 +193,7 @@ int main(int argc, char** argv){
   
   //Loop
   while (!gameOver){
-    //inputs()
+    inputs(&p1, &p2);
     update(&ball, &p1, &p2);
     draw(renderer, &ball.rect, &p1, &p2);
   }
@@ -203,10 +207,19 @@ int main(int argc, char** argv){
 
 void inputs(SDL_FRect* p1, SDL_FRect* p2) {
 
-
-
-
+  if (keyboard[SDL_SCANCODE_UP]) { p2->y -=2; }
+  if (keyboard[SDL_SCANCODE_DOWN]) { p2->y += 2; }
+  if (keyboard[SDL_SCANCODE_W]) { p1->y -= 2; }
+  if (keyboard[SDL_SCANCODE_S]) { p1->y += 2; }
   
+  SDL_Event e;
+  while (SDL_PollEvent(&e)){ //handle all events in the queue
+    switch(e.type){
+    case SDL_QUIT:
+      gameOver = 1;
+      break;
+    }
+  }
 }
 
 void update(Ball* ball, SDL_FRect* p1, SDL_FRect* p2) {
